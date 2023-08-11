@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from jose import jwt
-from settings import JWT_EXPIRE_TIME, SECRET_KEY, ALGORITHM
+from settings import (JWT, SECRET_KEY)
 import random
 
 
@@ -14,15 +14,27 @@ def generate_nickname():
     return nickname
 
 
-def create_jwt(data: dict):
+def create_jwt(data: dict, is_access: bool = True):
     to_encode = data.copy()
 
-    expire = datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_TIME)
+    if is_access:
+        expire = datetime.utcnow() + timedelta(minutes=JWT.get('JWT_ACCESS_EXPIRE_TIME'))
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=JWT.get('JWT_REFRESH_EXPIRE_TIME'))
+
     to_encode.update(
         {
-            'exp': expire
+            'exp': expire,
+            'is_access': True if is_access else False,
         }
     )
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=JWT.get('ALGORITHM'))
 
     return encoded_jwt
+
+
+def make_jwt(jwt_data: dict) -> dict:
+    return {
+        'access_token': create_jwt(jwt_data),
+        'refresh_token': create_jwt(jwt_data, is_access=False)
+    }
